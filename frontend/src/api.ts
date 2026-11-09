@@ -14,7 +14,7 @@ export function hostPathPrefix(): string {
 // vite dev 路径不含该段，回退为当前构建的 entryPath。
 function entryPathSegment(): string {
   const match = window.location.pathname.match(/^.*\/api\/v1\/jsplugin\/([^/]+)/);
-  return match ? match[1] : 'mi-song-gpt';
+  return match ? match[1] : 'mi-song-harness';
 }
 
 function pluginBase(): string {

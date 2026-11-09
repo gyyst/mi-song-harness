@@ -1,11 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/songloft-org/plugin-toolchain/main/schemas/plugin.schema.json",
-  "name": "mi-song-gpt",
-  "version": "2026.11.10",
+  "name": "mi-song-harness",
+  "version": "2026.11.10.1",
   "description": "基于 songloft-plugin-miot 的定制版（独立维护分支）。执行流程：固定口令 → 语音记忆 → 搜索口令 → AI 语义判定 → 问答接管。新增问答接管（小爱答不上来时由大模型接管，可联网搜索/带上下文/分段播报）、AI 播放意图语义判定、对话记录来源徽标与分阶段耗时、语音记忆重播；播放类指令优先本地曲库，其次外部搜索推流；本分支修复外部搜索单曲播完后重复播放的问题，并支持播完自动连播",
   "license": "Apache-2.0",
   "icon": "frontend/public/icon.svg",
-  "entryPath": "mi-song-gpt",
+  "entryPath": "mi-song-harness",
   "main": "main.jsc",
   "minHostVersion": "2.9.5",
   "renderEngine": "webview",
@@ -24,7 +24,7 @@
     "/dlna"
   ],
   "updateUrl": "https://raw.githubusercontent.com/gyyst/mi-song-harness/main/plugin.json",
-  "download_url": "https://github.com/gyyst/mi-song-harness/releases/download/v2026.11.10/mi-song-gpt.jsplugin.zip",
-  "entryHash": "f78bdb167913118c2bb61d887d2128289639846ab83e5489e476f6b1aba66c43",
-  "zipHash": "1f10336e3904e6c3f4c6b1e444c98f2117908101d86bc20198f8333316ff65ba"
+  "download_url": "https://github.com/gyyst/mi-song-harness/releases/download/v2026.11.10.1/mi-song-harness.jsplugin.zip",
+  "entryHash": "1fc78e5f9a55dea4a75694ca4e347f74da25f7ab11e8baa95fc7357cb9cd36cc",
+  "zipHash": "fcc6a9d8a8f625fb8115b6e87ba5cf7e174dcdeadf524953679713f5bf749fd3"
 }

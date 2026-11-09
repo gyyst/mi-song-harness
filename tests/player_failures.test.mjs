@@ -1956,7 +1956,7 @@ for (const waitMs of [3600000, 12 * 3600000]) {
       assert.equal(manager.getCurrentSong().id, 17);
       assert.equal(pushed.length, 2);
       assert.ok(pushed[1].includes('/songs/17/play'));
-      assert.ok(h.hostCalls.some(([method, path]) => method === 'POST' && path === '/api/v1/songs/16/played?source=mi-song-gpt'));
+      assert.ok(h.hostCalls.some(([method, path]) => method === 'POST' && path === '/api/v1/songs/16/played?source=mi-song-harness'));
       manager.cleanup();
     });
   });

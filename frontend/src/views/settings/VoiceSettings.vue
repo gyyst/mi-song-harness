@@ -623,7 +623,7 @@ async function deleteMemoryRecord(id?: string): Promise<void> {
   }
 }
 
-// --- QA 问答接管（mi-song-gpt）---
+// --- QA 问答接管（mi-song-harness）---
 
 const qaTestQuery = ref('');
 const qaTestResult = ref('');
@@ -682,7 +682,7 @@ function setQAMemoryEnabled(enabled: boolean): void {
   qaSave();
 }
 
-// --- 用户记忆 / 对话历史（按账号，与设备无关；mi-song-gpt）---
+// --- 用户记忆 / 对话历史（按账号，与设备无关；mi-song-harness）---
 
 interface QATurn { id: string; user: string; assistant: string; created_at: number; phase: string; error?: string }
 interface QAMemory { id: string; content: string; manual?: boolean; source_ids?: string[] }
@@ -799,7 +799,7 @@ const qaPipelineChipClass = computed(() => {
   return 'chip-success';
 });
 
-// --- 对话记录来源徽标（mi-song-gpt）---
+// --- 对话记录来源徽标（mi-song-harness）---
 
 const outcomeLabels: Record<string, string> = {
   rule: '口令',

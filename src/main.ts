@@ -84,7 +84,7 @@ let chatMemory: ChatMemoryService;
 let voiceDispatcher: VoiceDispatcher;
 
 async function onInit(): Promise<void> {
-  songloft.log.info('mi-song-gpt 插件初始化...');
+  songloft.log.info('mi-song-harness 插件初始化...');
 
   // 初始化管理器
   configManager = new ConfigManager();
@@ -208,11 +208,11 @@ async function onInit(): Promise<void> {
     voiceEngine.setEnabled(true);
   }
 
-  songloft.log.info('mi-song-gpt 插件初始化完成');
+  songloft.log.info('mi-song-harness 插件初始化完成');
 }
 
 async function onDeinit(): Promise<void> {
-  songloft.log.info('mi-song-gpt 插件停止...');
+  songloft.log.info('mi-song-harness 插件停止...');
   voiceDispatcher?.close();
   chatMemory?.close();
   voiceEngine?.close();
@@ -221,7 +221,7 @@ async function onDeinit(): Promise<void> {
   conversationMonitor?.stop();
   playlistManagerMap?.cleanup();
   authService?.cleanup();
-  songloft.log.info('mi-song-gpt 插件已停止');
+  songloft.log.info('mi-song-harness 插件已停止');
 }
 
 // 后端热重载（自动更新）前的忙碌探测：正在播放时返回 busy，让后端把重载推迟到空闲，

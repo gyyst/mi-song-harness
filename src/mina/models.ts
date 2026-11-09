@@ -135,7 +135,7 @@ export interface ConversationRecord {
   answers: Array<{
     type: string;  // "TTS" | "LLM" | "AUDIO" 等
     tts?: { text: string };
-    llm?: { text: string };  // 部分新固件用 LLM 类型承载原生回答（mi-song-gpt 补充）
+    llm?: { text: string };  // 部分新固件用 LLM 类型承载原生回答（mi-song-harness 补充）
   }>;
 }
 

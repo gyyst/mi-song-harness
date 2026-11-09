@@ -300,7 +300,7 @@ export class MusicCommandService {
 
   private async processMessage(msg: ConversationMessage, options: MessageOptions): Promise<boolean> {
     // 走到哪一步就记哪一段耗时；done() 把判定反馈（meta.ai，无论是否执行）+ 分阶段耗时 +
-    // 总耗时回填到 msg（monitor 缓冲区与 ws 广播共享同一对象），供「最近对话记录」meta 行展示（mi-song-gpt）
+    // 总耗时回填到 msg（monitor 缓冲区与 ws 广播共享同一对象），供「最近对话记录」meta 行展示（mi-song-harness）
     const t0 = Date.now();
     const stages: OutcomeStage[] = [];
     let aiResult: AIAnalysisResult | null = null;
@@ -431,7 +431,7 @@ export class MusicCommandService {
       }
     }
 
-    // QA 问答接管（mi-song-gpt）：音乐意图未命中的指令，先看小爱能不能自己答；
+    // QA 问答接管（mi-song-harness）：音乐意图未命中的指令，先看小爱能不能自己答；
     // 答不上来（命中兜底话术/超时）才打断并交给问答大模型。
     const pm = this.playlistManagerMap.get(accountId, msg.device_id);
     const wasPlaying = !!(pm && pm.isPlaying());
@@ -741,13 +741,13 @@ export class MusicCommandService {
 
   /**
    * 问答测试：验证 qa_config 链路（普通对话/联网搜索降级），不触发 TTS、不写历史，
-   * 供设置页「问答测试」按钮调用（mi-song-gpt）。
+   * 供设置页「问答测试」按钮调用（mi-song-harness）。
    */
   async testQA(query: string): Promise<import('../voicecmd/qa_fallback').QATestResult> {
     return this.qaFallback.testQA(query);
   }
 
-  /** 问答接管是否已启用（供状态展示）（mi-song-gpt） */
+  /** 问答接管是否已启用（供状态展示）（mi-song-harness） */
   async isQAEnabled(): Promise<boolean> {
     const cfg = await this.configManager.getQAConfig();
     return !!(cfg.enabled && cfg.api_url.trim() && cfg.api_key.trim() && cfg.model.trim());

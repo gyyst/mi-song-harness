@@ -118,7 +118,7 @@ jobs:
           TAG: ${{ steps.manifest.outputs.tag }}
           ZIP_NAME: ${{ steps.manifest.outputs.zip_name }}
         run: |
-          NOTES="自动构建的 mi-song-gpt 插件 v${VERSION}"
+          NOTES="自动构建的 mi-song-harness 插件 v${VERSION}"
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "dist/${ZIP_NAME}" --clobber
             gh release edit "$TAG" --title "v${VERSION}" --notes "$NOTES"

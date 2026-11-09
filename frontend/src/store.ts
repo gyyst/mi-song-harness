@@ -866,7 +866,7 @@ export async function saveVoiceCommands(commands = state.voiceCommands): Promise
 
 /**
  * 最近对话记录统一按时间降序。WS 增量帧的到达顺序不可靠（同批多条时 unshift 会把
- * 顺序翻转），所有入口（快照/增量/轮询刷新）赋值前都过这里，顺序永远与到达无关（mi-song-gpt）。
+ * 顺序翻转），所有入口（快照/增量/轮询刷新）赋值前都过这里，顺序永远与到达无关（mi-song-harness）。
  */
 export function sortConversationDesc(list: ConversationMessage[]): ConversationMessage[] {
   return [...list].sort((a, b) => (Number(b.timestamp) || 0) - (Number(a.timestamp) || 0));
@@ -874,7 +874,7 @@ export function sortConversationDesc(list: ConversationMessage[]): ConversationM
 
 /**
  * 按 id upsert：outcome 补推帧替换原条目（不产生重复），真正的新消息插到顶部，
- * 最后统一降序（mi-song-gpt）。
+ * 最后统一降序（mi-song-harness）。
  */
 export function upsertConversationMessage(list: ConversationMessage[], item: ConversationMessage): ConversationMessage[] {
   const idx = item.id ? list.findIndex(m => m.id === item.id) : -1;

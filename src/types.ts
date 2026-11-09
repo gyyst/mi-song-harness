@@ -197,7 +197,7 @@ export interface PluginConfig {
   hourly_chime_resume_enabled?: boolean; // 整点报时后续播，默认关闭
   max_song_index: number;
   ai_config: AIConfig;
-  qa_config: QAConfig;   // 问答接管配置（mi-song-gpt 新增，独立存储键 qa_config）
+  qa_config: QAConfig;   // 问答接管配置（mi-song-harness 新增，独立存储键 qa_config）
   play_mode_default_migrated?: boolean; // 一次性迁移标志：默认播放模式 order->loop 是否已迁移过存量设备
 }
 
@@ -306,7 +306,7 @@ export interface AIConfig {
 }
 
 /**
- * QA 问答接管配置（mi-song-gpt 新增）
+ * QA 问答接管配置（mi-song-harness 新增）
  *
  * 与 ai_config（语义判定）分离：判定用快而便宜的小模型（如 qwen-flash），
  * 问答用强模型（如豆包/DeepSeek），两者可各配各的服务商。
@@ -382,7 +382,7 @@ export interface ConversationMessage {
   device_name: string;
   message: AskMessage;
   /**
-   * 语音引擎的处理来源（mi-song-gpt 新增，供对话记录 UI 展示路由结果）。
+   * 语音引擎的处理来源（mi-song-harness 新增，供对话记录 UI 展示路由结果）。
    * 由 monitor 在 voice_engine 回调返回后回填进缓冲区里的消息对象。
    */
   outcome?: VoiceOutcomeSource;
@@ -402,7 +402,7 @@ export interface OutcomeStage {
   ms: number;
 }
 
-/** 语音引擎对单条消息的判定反馈与耗时明细（mi-song-gpt） */
+/** 语音引擎对单条消息的判定反馈与耗时明细（mi-song-harness） */
 export interface OutcomeMeta {
   /** 语义判定结果：只要判定器启用且返回了结果就带上，无论最终是否执行 */
   ai?: {

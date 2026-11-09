@@ -386,7 +386,7 @@ export function registerConfigHandlers(
         await configManager.saveAIConfig(aiConfig);
       }
 
-      // 更新 qa_config（问答接管，mi-song-gpt）
+      // 更新 qa_config（问答接管，mi-song-harness）
       if (body.qa_config !== undefined) {
         const qaConfig = await configManager.getQAConfig();
         const newQA = body.qa_config as Record<string, unknown>;

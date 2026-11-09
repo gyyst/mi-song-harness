@@ -48,7 +48,7 @@ SUCCESS
 
 Generated:
 
-dist/mi-song-gpt.jsplugin.zip
+dist/mi-song-harness.jsplugin.zip
 
 
 ## Validate Test

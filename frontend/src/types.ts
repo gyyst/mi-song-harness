@@ -16,7 +16,7 @@ export interface AIConfig {
   timeout?: number;
 }
 
-/** 问答接管配置（mi-song-gpt）：语义判定用 ai_config（小模型），问答用 qa_config（强模型+联网） */
+/** 问答接管配置（mi-song-harness）：语义判定用 ai_config（小模型），问答用 qa_config（强模型+联网） */
 export interface QAConfig {
   enabled?: boolean;
   api_url?: string;

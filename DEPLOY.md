@@ -1,4 +1,4 @@
-# mi-song-gpt 部署与使用指南
+# mi-song-harness 部署与使用指南
 
 > 基于 songloft-plugin-miot 的定制版：在音乐播放能力之上，新增**问答接管**——
 > 播放类指令走本地音乐，其他问题小爱能答的不打扰、答不上来由大模型接管（可联网搜索）。
@@ -24,15 +24,15 @@
 
 ## 一、构建产物
 
-- 本仓库构建产物：`dist/mi-song-gpt.jsplugin.zip`（已构建好，直接用）
+- 本仓库构建产物：`dist/mi-song-harness.jsplugin.zip`（已构建好，直接用）
 - 以后改了代码要重新构建：`npm install && npm run build`
 
 ## 二、安装插件（NAS 上操作）
 
 1. 打开 songloft 网页（`http://NAS_IP:58091`）→ 插件页面
-2. 无需卸载官方"智能音箱"(miot)——本插件 entryPath 为 `mi-song-gpt`，与官方 `miot` **可共存**
-3. 上传 `dist/mi-song-gpt.jsplugin.zip` 安装
-4. 安装后确认插件名为「mi-song-gpt」，版本 `2026.11.10`
+2. 无需卸载官方"智能音箱"(miot)——本插件 entryPath 为 `mi-song-harness`，与官方 `miot` **可共存**
+3. 上传 `dist/mi-song-harness.jsplugin.zip` 安装
+4. 安装后确认插件名为「mi-song-harness」，版本 `2026.11.10`
 
 > 本 fork 的 `plugin.json` 带有 `updateUrl`，指向 [gyyst/mi-song-harness](https://github.com/gyyst/mi-song-harness) main 分支：Songloft 会从本仓库检查更新，不会跟随上游。从旧仓库（`gyyst/mi-song-gpt-legacy`，原 `gyyst/mi-song-gpt`）版本升级过来需要**手动上传一次**本仓库的 zip 以切换更新源，之后即可在插件页直接更新。
 
@@ -109,11 +109,11 @@ docker-compose 用户把对应 service 注释掉后 `docker compose up -d`。
 | `src/utils/ai_url.ts` | 新增 `aiResponsesUrl`（方舟 Responses 端点） |
 | `src/types.ts` / `src/config/manager.ts` | 新增 `QAConfig`/`VoiceOutcome` 类型与 `qa_config` 独立存储键 |
 | `frontend/src/views/settings/VoiceSettings.vue` 等 | 上游 4 面板语音设置中「commands」面板内嵌问答接管卡与问答测试；对话监听状态栏新增「AI判定/问答接管」状态 chips；最近对话记录每条标注来源徽标+耗时，并新增判定反馈/分阶段耗时 meta 行 |
-| `plugin.json` | 名称保持 mi-song-gpt；entryPath 保持 `mi-song-gpt`（与官方 miot 共存，已有安装/配置可平滑切换）；版本 2026.11.10；`updateUrl` 指向本 fork（`gyyst/mi-song-harness`）main；author 改为 wyrt0 / gyyst、homepage 指向本仓库；download_url 钉到 `gyyst/mi-song-harness` 的 `releases/download/v2026.11.10/mi-song-gpt.jsplugin.zip`；保留上游 `publicPaths: ["/dlna"]`、renderEngine webview |
+| `plugin.json` | 名称保持 mi-song-harness；entryPath 保持 `mi-song-harness`（与官方 miot 共存，已有安装/配置可平滑切换）；版本 2026.11.10；`updateUrl` 指向本 fork（`gyyst/mi-song-harness`）main；author 改为 wyrt0 / gyyst、homepage 指向本仓库；download_url 钉到 `gyyst/mi-song-harness` 的 `releases/download/v2026.11.10/mi-song-harness.jsplugin.zip`；保留上游 `publicPaths: ["/dlna"]`、renderEngine webview |
 | `package.json` | name/description 为独立分支标识，scripts 沿用上游并新增 `typecheck` / `test` / `postbuild` 哈希同步 |
 | `src/account/manager.ts` / `src/player/manager.ts` 等 | 默认播放模式由「顺序播放」改为「列表循环」：新设备默认值、`normalizePlayMode` 兜底、`playMode` 初始值，以及定时任务 / 语音口令 / 联网搜歌 / 设备列表 / 前端各处兜底统一为 `loop`（模式弹层高亮改为「非列表循环才高亮」） |
 | `src/config/manager.ts` / `src/main.ts` | **新增** `migratePlayModeDefaultOnce()` 一次性迁移：把存量设备落盘的 `play_mode` 从 order 翻成 loop（`play_mode_default_migrated` 标志位，只执行一次；之后手动切回的顺序播放不会被覆盖） |
-| `src/player/manager.ts` | 播完/落盘失败上报 `source=mi-song-gpt`（上游为 `miot`） |
+| `src/player/manager.ts` | 播完/落盘失败上报 `source=mi-song-harness`（上游为 `miot`） |
 | `.github/workflows/release.yml` | 支持推送 `v*` 标签与手动触发；构建 frontend + 插件，自动回填 `version` / `download_url` / `updateUrl` / 哈希并回写 main，供 Songloft 在线更新 |
 | `src/voicecmd/online_searcher.ts` | **修复外部搜索单曲播放循环**：未配置目标歌单时不再直接 `playURL`，改为 `PlaylistManager.playWithSongs([song], 0, 'order')` 单曲临时列表，注册切歌定时器，播完即停（避免音箱重拉同一 URL）；**新增「播完自动连播」**（`external_search_auto_continue`）：开启后单曲播完自动从 provider candidates / 同歌手搜索 / 已导入网络歌曲中续播，链路状态与队列代数绑定，换队列即失效 |
 | `src/player/manager.ts` | **新增临时队列补充接口**：`appendSongs()` / `setQueueRefillHook()` / `replenishQueue()`，队列低水位提前补歌、播完前等最后一次补充；`queueGeneration` 防止旧异步回调把歌追加到新队列 |
@@ -170,4 +170,4 @@ docker-compose 用户把对应 service 注释掉后 `docker compose up -d`。
 
 ## 八、回滚
 
-本插件 entryPath 已改为 `mi-song-gpt`，回滚即**卸载 mi-song-gpt**（可保留数据），再按需安装官方 miot——两者互不影响。旧版覆盖安装期间留在 `miot` 命名空间的存储键（`qa_config` 等）不影响官方插件运行。
+本插件 entryPath 已改为 `mi-song-harness`，回滚即**卸载 mi-song-harness**（可保留数据），再按需安装官方 miot——两者互不影响。旧版覆盖安装期间留在 `miot` 命名空间的存储键（`qa_config` 等）不影响官方插件运行。

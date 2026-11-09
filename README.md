@@ -63,7 +63,7 @@ npm run build       # 产物 dist/mi-song-harness.jsplugin.zip
 npm run validate    # 校验 plugin.json 哈希
 ```
 
-安装：songloft 网页 → 插件页面 → 无需卸载官方「智能音箱」(miot)，两者 entryPath 不同、可共存 → 上传 `dist/mi-song-harness.jsplugin.zip`。安装后插件名为 **mi-song-harness**。
+安装：songloft 网页 → 插件页面 → 无需卸载官方「智能音箱」(miot)，两者 entryPath 不同、可共存 → 上传 `dist/mi-song-harness.jsplugin.zip`。安装后插件名为 **mi-song-harness**。若已安装旧版 `mi-song-gpt`，请先卸载再安装：entryPath 已变更，无法覆盖升级，且旧配置不会自动继承。
 
 在线更新：首次安装本仓库的包之后，Songloft 会按 `plugin.json` 的 `updateUrl` 检查本仓库 main 分支的版本并下载 `download_url`；从上游版本切换过来需要手动上传一次。
 

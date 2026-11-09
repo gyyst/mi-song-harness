@@ -32,7 +32,9 @@
 1. 打开 songloft 网页（`http://NAS_IP:58091`）→ 插件页面
 2. 无需卸载官方"智能音箱"(miot)——本插件 entryPath 为 `mi-song-harness`，与官方 `miot` **可共存**
 3. 上传 `dist/mi-song-harness.jsplugin.zip` 安装
-4. 安装后确认插件名为「mi-song-harness」，版本 `2026.11.10`
+4. 安装后确认插件名为「mi-song-harness」，版本 `2026.11.10.1`
+
+> ⚠️ 如果已安装旧版 `mi-song-gpt`（entryPath 不同），请先在插件页卸载它，再安装本包：两者无法覆盖升级，同时启用会重复处理语音指令；旧插件配置不会自动继承，安装后需重新填写 AI / 问答 / 语音设置。
 
 > 本 fork 的 `plugin.json` 带有 `updateUrl`，指向 [gyyst/mi-song-harness](https://github.com/gyyst/mi-song-harness) main 分支：Songloft 会从本仓库检查更新，不会跟随上游。从旧仓库（`gyyst/mi-song-gpt-legacy`，原 `gyyst/mi-song-gpt`）版本升级过来需要**手动上传一次**本仓库的 zip 以切换更新源，之后即可在插件页直接更新。
 

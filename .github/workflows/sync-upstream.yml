@@ -85,6 +85,7 @@ jobs:
           echo "已推送同步提交到 main"
 
       - name: Close previous failure issue
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
@@ -100,6 +101,7 @@ jobs:
 
       - name: Report failure
         if: failure() && (steps.sync.outcome != 'success' || steps.validate.outcome == 'failure' || steps.push.outcome == 'failure')
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}

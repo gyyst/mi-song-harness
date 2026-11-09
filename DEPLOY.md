@@ -32,9 +32,9 @@
 1. 打开 songloft 网页（`http://NAS_IP:58091`）→ 插件页面
 2. 无需卸载官方"智能音箱"(miot)——本插件 entryPath 为 `mi-song-gpt`，与官方 `miot` **可共存**
 3. 上传 `dist/mi-song-gpt.jsplugin.zip` 安装
-4. 安装后确认插件名为「mi-song-gpt」，版本 `2026.11.9.2`
+4. 安装后确认插件名为「mi-song-gpt」，版本 `2026.11.10`
 
-> 本独立维护分支的 `plugin.json` 带有 `updateUrl`，指向 [gyyst/mi-song-gpt](https://github.com/gyyst/mi-song-gpt) main 分支：Songloft 会从本仓库检查更新，不会跟随上游。首次从上游版本切换过来需要手动上传一次本仓库的 zip，之后即可在插件页直接更新。
+> 本 fork 的 `plugin.json` 带有 `updateUrl`，指向 [gyyst/mi-song-harness](https://github.com/gyyst/mi-song-harness) main 分支：Songloft 会从本仓库检查更新，不会跟随上游。从旧仓库（`gyyst/mi-song-gpt-legacy`，原 `gyyst/mi-song-gpt`）版本升级过来需要**手动上传一次**本仓库的 zip 以切换更新源，之后即可在插件页直接更新。
 
 ## 三、配置（插件设置页 →「语音」标签）
 
@@ -109,7 +109,7 @@ docker-compose 用户把对应 service 注释掉后 `docker compose up -d`。
 | `src/utils/ai_url.ts` | 新增 `aiResponsesUrl`（方舟 Responses 端点） |
 | `src/types.ts` / `src/config/manager.ts` | 新增 `QAConfig`/`VoiceOutcome` 类型与 `qa_config` 独立存储键 |
 | `frontend/src/views/settings/VoiceSettings.vue` 等 | 上游 4 面板语音设置中「commands」面板内嵌问答接管卡与问答测试；对话监听状态栏新增「AI判定/问答接管」状态 chips；最近对话记录每条标注来源徽标+耗时，并新增判定反馈/分阶段耗时 meta 行 |
-| `plugin.json` | 名称保持 mi-song-gpt；entryPath 保持 `mi-song-gpt`（与官方 miot 共存，已有安装/配置可平滑切换）；版本 2026.11.9.2；`updateUrl` 指向本仓库 main；author 改为 wyrt0 / gyyst、homepage 指向本仓库；download_url 钉到本仓库 `releases/download/v2026.11.9.2/mi-song-gpt.jsplugin.zip`；保留上游 `publicPaths: ["/dlna"]`、renderEngine webview |
+| `plugin.json` | 名称保持 mi-song-gpt；entryPath 保持 `mi-song-gpt`（与官方 miot 共存，已有安装/配置可平滑切换）；版本 2026.11.10；`updateUrl` 指向本 fork（`gyyst/mi-song-harness`）main；author 改为 wyrt0 / gyyst、homepage 指向本仓库；download_url 钉到 `gyyst/mi-song-harness` 的 `releases/download/v2026.11.10/mi-song-gpt.jsplugin.zip`；保留上游 `publicPaths: ["/dlna"]`、renderEngine webview |
 | `package.json` | name/description 为独立分支标识，scripts 沿用上游并新增 `typecheck` / `test` / `postbuild` 哈希同步 |
 | `src/account/manager.ts` / `src/player/manager.ts` 等 | 默认播放模式由「顺序播放」改为「列表循环」：新设备默认值、`normalizePlayMode` 兜底、`playMode` 初始值，以及定时任务 / 语音口令 / 联网搜歌 / 设备列表 / 前端各处兜底统一为 `loop`（模式弹层高亮改为「非列表循环才高亮」） |
 | `src/config/manager.ts` / `src/main.ts` | **新增** `migratePlayModeDefaultOnce()` 一次性迁移：把存量设备落盘的 `play_mode` 从 order 翻成 loop（`play_mode_default_migrated` 标志位，只执行一次；之后手动切回的顺序播放不会被覆盖） |

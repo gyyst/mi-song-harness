@@ -2,7 +2,7 @@
 
 基于 [songloft-plugin-miot](https://github.com/songloft-org/songloft-plugin-miot) 定制的 Songloft 智能音箱 JS 插件：在原插件的音乐播放能力之上，新增**问答接管**与 **AI 播放意图语义判定**——小爱答得上的不打扰，答不上来的由大模型接话（可联网搜索），播放类指令始终优先走本地曲库。
 
-**【独立维护分支 [gyyst/mi-song-gpt](https://github.com/gyyst/mi-song-gpt)】**：[wyrt000/mi-song-gpt](https://github.com/wyrt000/mi-song-gpt) 的问答接管、用户记忆等定制，已叠加在官方 [songloft-plugin-miot](https://github.com/songloft-org/songloft-plugin-miot) 主干（当前基线 `v2026.11.9.1` / `1379528`）之上；本仓库与上游历史共享祖先，可随时用 `scripts/sync-upstream.sh` 合入官方更新，冲突时按「保定制、吸收上游改进」处理。
+**【官方 fork [gyyst/mi-song-harness](https://github.com/gyyst/mi-song-harness)】**：[wyrt000/mi-song-gpt](https://github.com/wyrt000/mi-song-gpt) 的问答接管、用户记忆等定制，已叠加在官方 [songloft-plugin-miot](https://github.com/songloft-org/songloft-plugin-miot) 主干（当前基线 `v2026.11.9.1` / `1379528`）之上；本仓库与上游历史共享祖先，可随时用 `scripts/sync-upstream.sh` 合入官方更新，冲突时按「保定制、吸收上游改进」处理。旧发布仓库 [gyyst/mi-song-gpt](https://github.com/gyyst/mi-song-gpt-legacy) 已更名为 `mi-song-gpt-legacy` 并归档。
 
 > ℹ️ 本仓库的 `plugin.json` 带有 `updateUrl`，指向本仓库 main 分支。Songloft 会从**本仓库**检查并下载更新，不再跟随上游。首次从上游版本切换过来需要手动上传一次本仓库的 zip，之后即可在 Songloft 插件页直接更新。详细部署、配置、验收与排错见 [DEPLOY.md](DEPLOY.md)。
 

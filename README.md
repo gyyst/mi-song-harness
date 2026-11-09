@@ -4,7 +4,7 @@
 
 **【官方 fork [gyyst/mi-song-harness](https://github.com/gyyst/mi-song-harness)】**：[wyrt000/mi-song-gpt](https://github.com/wyrt000/mi-song-gpt) 的问答接管、用户记忆等定制，已叠加在官方 [songloft-plugin-miot](https://github.com/songloft-org/songloft-plugin-miot) 主干（当前基线 `v2026.11.9.1` / `1379528`）之上；本仓库与上游历史共享祖先，可随时用 `scripts/sync-upstream.sh` 合入官方更新，冲突时按「保定制、吸收上游改进」处理。旧发布仓库 [gyyst/mi-song-gpt](https://github.com/gyyst/mi-song-gpt-legacy) 已更名为 `mi-song-gpt-legacy` 并归档。
 
-> ℹ️ 本仓库的 `plugin.json` 带有 `updateUrl`，指向本仓库 main 分支。Songloft 会从**本仓库**检查并下载更新，不再跟随上游。首次从上游版本切换过来需要手动上传一次本仓库的 zip，之后即可在 Songloft 插件页直接更新。详细部署、配置、验收与排错见 [DEPLOY.md](DEPLOY.md)。
+> ℹ️ 本 fork 的 `plugin.json` 带有 `updateUrl`，指向本仓库 main 分支。Songloft 会从**本仓库**检查并下载更新，不再跟随上游。从旧仓库（`gyyst/mi-song-gpt-legacy`）或官方版本切换过来，需要手动上传一次本仓库的 zip，之后即可在 Songloft 插件页直接更新。详细部署、配置、验收与排错见 [DEPLOY.md](DEPLOY.md)。
 
 > ™️ **商标声明**：本插件中提到的 "MIoT" "MiHome" 等协议 / 产品名称均归各自商标权人所有，相关名称的出现仅出于互操作和指示性合理使用目的。本插件**未获得任何商标持有人的授权或背书**，与上述商标持有人**无任何关联**。
 

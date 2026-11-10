@@ -89,8 +89,11 @@ export const RANDOM_PLAYLIST_SONG_LIMIT = 20;
 /**
  * 随机歌单通常要先列歌单、再取详情，比单曲搜索多一跳；
  * 给独立的宽期限，不把用户配置的 6 秒单曲搜索超时套过来。
+ * 实测洛雪音源 kw 详情 3.6~9.3 秒、冷唤醒还要等音源脚本加载，
+ * 12 秒会把刚好完成的响应判成超时（实测 12.06 秒返回），因此放宽到 22 秒。
+ * provider 侧会并发竞速并缓存，正常请求仍应在数秒内完成。
  */
-const RANDOM_PLAYLIST_TIMEOUT_MS = 12000;
+const RANDOM_PLAYLIST_TIMEOUT_MS = 22000;
 
 /** 搜索源返回的随机歌单（provider 自行完成平台/榜单随机）。 */
 export interface RandomPlaylist {

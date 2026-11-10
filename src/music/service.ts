@@ -787,7 +787,7 @@ export class MusicCommandService {
     if (type === 'play_song') {
       const term = artist && artist.trim() ? `${argument} ${artist.trim()}` : (argument || '');
       if (!term.trim()) {
-        return { kind: 'song', found: false, detail: '（无歌名，将续播上次队列或播放曲库全部歌曲）' };
+        return { kind: 'song', found: false, detail: '（无歌名，将续播上次队列、随机播放网络歌单或播放曲库全部歌曲）' };
       }
       if (!(await this.indexingManager.waitForReady(INDEX_READY_WAIT_MS))) {
         return { kind: 'song', found: false, detail: '索引未就绪，无法预览搜索结果' };

@@ -787,7 +787,7 @@ export class MusicCommandService {
     if (type === 'play_song') {
       const term = artist && artist.trim() ? `${argument} ${artist.trim()}` : (argument || '');
       if (!term.trim()) {
-        return { kind: 'song', found: false, detail: '（无歌名，将恢复上次播放）' };
+        return { kind: 'song', found: false, detail: '（无歌名，将续播上次队列或播放曲库全部歌曲）' };
       }
       if (!(await this.indexingManager.waitForReady(INDEX_READY_WAIT_MS))) {
         return { kind: 'song', found: false, detail: '索引未就绪，无法预览搜索结果' };
@@ -1168,10 +1168,13 @@ export class MusicCommandService {
     playlistName = playlistName.trim();
     const hasExplicitName = playlistName.length > 0;
 
-    // 空参数 + 有活跃歌单：直接恢复播放，无需搜索和打断
+    // 空参数 + 有活跃歌单：直接恢复播放，无需搜索和打断；队列已到队尾时回退到曲库
     if (!playlistName && pm.hasPlaylist()) {
       songloft.log.info('[MusicCommandService] Play playlist: resume last playback');
       const ok = await pm.next();
+      if (ok) return;
+      songloft.log.info('[MusicCommandService] Play playlist: current queue has no next song, fallback to library playback');
+      await this.playDefaultLibrary(pm, accountId, deviceId);
       return;
     }
 
@@ -1195,15 +1198,16 @@ export class MusicCommandService {
       songloft.log.info(`[MusicCommandService] Playlist index refreshed on-demand: playlists=${result.playlistCount} songs=${result.songCount}`);
     }
 
-    // 空参数处理：使用默认歌单
+    // 空参数处理：优先使用第一个有歌的歌单；收藏/电台收藏等空歌单不能作为默认歌单。
     if (!playlistName) {
-      // 使用第一个歌单
       const playlists = this.indexingManager.searchPlaylist('');
-      if (playlists.length === 0) {
-        songloft.log.warn('[MusicCommandService] No playlists available');
+      const usable = playlists.find(pl => pl.songCount > 0);
+      if (!usable) {
+        songloft.log.warn(`[MusicCommandService] No non-empty playlist available (playlists=${playlists.length}), fallback to library playback`);
+        await this.playDefaultLibrary(pm, accountId, deviceId);
         return;
       }
-      playlistName = playlists[0].name;
+      playlistName = usable.name;
       songloft.log.info(`[MusicCommandService] No name specified, using default playlist: ${playlistName}`);
     }
 
@@ -1328,14 +1332,19 @@ export class MusicCommandService {
     // 本地多字段搜索用歌名+歌手（配合 cover 匹配提升命中）；在线 hint / TTS 文案仍用纯歌名
     const searchTerm = artist && artist.trim() ? `${songName} ${artist.trim()}` : songName;
 
-    // 空参数处理：继续上次播放
+    // 空参数处理：先续播当前队列；没有队列或已到队尾时播放曲库全部歌曲。
+    // 「播放音乐」这类整句都是口令的搜索词参数为空，不能只 next()：单曲临时队列
+    // 到队尾会被 next() 直接 stop，用户听不到任何声音。
     if (!songName) {
       if (pm.hasPlaylist()) {
         songloft.log.info('[MusicCommandService] Play song: resume last playback');
         const ok = await pm.next();
-        return null;
+        if (ok) return null;
+        songloft.log.info('[MusicCommandService] Play song: current queue has no next song, fallback to library playback');
+      } else {
+        songloft.log.info('[MusicCommandService] Play song: no active playlist, fallback to library playback');
       }
-      songloft.log.warn('[MusicCommandService] No song name specified and no active playlist');
+      await this.playDefaultLibrary(pm, accountId, deviceId);
       return null;
     }
 
@@ -1402,6 +1411,63 @@ export class MusicCommandService {
     songloft.log.warn(`[MusicCommandService] Song not found or failed to play: ${songName}`);
     await this.minaService.textToSpeech(accountId, deviceId, `未找到歌曲：${songName}`);
     return null;
+  }
+
+  /**
+   * 播放曲库全部歌曲。
+   *
+   * 「播放音乐」「播放歌曲」这类没有具体歌名的口令，在既没有活动队列、或活动队列
+   * 已经到队尾时使用。曲库里的独立歌曲（不在任何歌单）也能播放，不写入真实歌单。
+   */
+  private async playDefaultLibrary(pm: PlaylistManager, accountId: string, deviceId: string): Promise<void> {
+    let songs: any[] = [];
+    let loaded = false;
+    try {
+      const config = await this.configManager.getConfig();
+      const limit = Math.max(1000, Math.min(100000, Number(config.max_song_index) || 10000));
+      songs = (await songloft.songs.list({ limit })) ?? [];
+      loaded = true;
+    } catch (e) {
+      songloft.log.warn('[MusicCommandService] Play default library: failed to load songs: ' + String(e));
+    }
+
+    if (songs.length === 0) {
+      if (!loaded) {
+        songloft.log.warn('[MusicCommandService] Play default library: library load failed');
+        await this.minaService.textToSpeech(accountId, deviceId, '读取曲库失败，请稍后重试');
+        return;
+      }
+      songloft.log.warn('[MusicCommandService] Play default library: library is empty');
+      await this.minaService.textToSpeech(accountId, deviceId, '曲库为空，请先添加歌曲');
+      return;
+    }
+
+    let mode: PlayMode = 'loop';
+    try {
+      const devices = await this.configManager.getDevices(accountId);
+      const devCfg = devices.find(d => d.device_id === deviceId);
+      if (devCfg && devCfg.play_mode) {
+        mode = devCfg.play_mode as PlayMode;
+      }
+    } catch (e) {
+      songloft.log.warn('[MusicCommandService] Play default library: failed to read device play mode: ' + String(e));
+    }
+
+    pm.prepareForNewPlayback();
+    try {
+      await this.minaService.stopPlay(accountId, deviceId);
+    } catch (e) {
+      songloft.log.warn('[MusicCommandService] Play default library: failed to interrupt broadcast: ' + String(e));
+    }
+
+    songloft.log.info(`[MusicCommandService] Play default library: songs=${songs.length} mode=${mode}`);
+    const ok = await pm.playWithSongs(songs as any, 0, mode, '全部歌曲', '');
+    if (!ok) {
+      songloft.log.error('[MusicCommandService] Play default library: playWithSongs failed');
+      await this.minaService.textToSpeech(accountId, deviceId, '播放失败，请稍后重试');
+      return;
+    }
+    songloft.log.info(`[MusicCommandService] Play default library success: songs=${songs.length} mode=${mode}`);
   }
 
   private stripArtistSuffix(argument: string): string {

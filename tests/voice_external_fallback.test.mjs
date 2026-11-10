@@ -49,6 +49,7 @@ function fixture(t, options = {}) {
     log: { info() { }, warn() { }, error() { } },
     plugin: { getToken: async () => 'fixture-token' },
     playlists: { getSongs: async () => options.localSongs || [] },
+    songs: { list: async () => options.librarySongs || [] },
   };
   globalThis.fetch = async (url, init) => {
     const body = JSON.parse(init.body);
@@ -221,6 +222,7 @@ test('empty playlist argument with no defaults does not search an empty keyword'
   const f = fixture(t);
   await f.engine.executePlayPlaylist('', 'account', 'speaker');
   assert.deepEqual(f.requests, []);
+  assert.deepEqual(f.speech, ['曲库为空，请先添加歌曲']);
 });
 
 test('empty artist argument does not trigger external search', async t => {

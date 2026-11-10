@@ -106,6 +106,7 @@ export function registerConfigHandlers(
           external_search_timeout: config.external_search_timeout ?? 6,
           external_search_no_import: !!config.external_search_no_import,
           external_search_auto_continue: !!config.external_search_auto_continue,
+          external_search_random_playlist: config.external_search_random_playlist !== false,
           search_priority: normalizeSearchPriority(config.search_priority),
           music_api_model_disabled: config.music_api_model_disabled || [],
           music_api_model_defaults: [...DEFAULT_MUSIC_API_MODELS],
@@ -261,6 +262,11 @@ export function registerConfigHandlers(
       // 更新 external_search_auto_continue（播完自动连播）
       if (body.external_search_auto_continue !== undefined) {
         config.external_search_auto_continue = !!body.external_search_auto_continue;
+      }
+
+      // 更新 external_search_random_playlist（播放音乐时随机网络歌单）
+      if (body.external_search_random_playlist !== undefined) {
+        config.external_search_random_playlist = !!body.external_search_random_playlist;
       }
 
       // 更新 search_priority
@@ -512,6 +518,7 @@ export function registerConfigHandlers(
       entryPath: string;
       name: string;
       searchPath: string;
+      playlistPath?: string;
       icon?: string;
     }
 
@@ -525,6 +532,7 @@ export function registerConfigHandlers(
           entryPath: r.entryPath,
           name: r.name || r.entryPath,
           searchPath: r.searchPath || '/api/search/topone',
+          playlistPath: r.playlistPath,
           icon: r.icon,
         });
       }
@@ -553,6 +561,7 @@ export function registerConfigHandlers(
           id: p.entryPath,
           name: p.name,
           url: `/api/v1/jsplugin/${p.entryPath}${p.searchPath}`,
+          ...(p.playlistPath ? { playlist_path: p.playlistPath, playlist_url: `/api/v1/jsplugin/${p.entryPath}${p.playlistPath}` } : {}),
           installed: !!found,
           active: found?.status === 'active',
           ...(p.icon ? { icon: p.icon } : {}),

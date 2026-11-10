@@ -86,6 +86,7 @@ function defaultPluginConfig(): PluginConfig {
     external_search_timeout: 6,
     external_search_no_import: false,
     external_search_auto_continue: false,
+    external_search_random_playlist: true,
     search_priority: 'parallel',
     indicator_light_enabled: true,
     default_cover_id: '1732418460076477549',
@@ -541,10 +542,13 @@ export class ConfigManager {
     if (!entryPath) {
       throw new Error('search provider entryPath is required');
     }
+    // playlistPath 只接受插件自己的站内绝对路径，避免注册方把请求引到外部地址。
+    const playlistPath = (reg.playlistPath || '').trim();
     const normalized: SearchProviderRegistration = {
       entryPath,
       name: (reg.name || '').trim() || entryPath,
       searchPath: (reg.searchPath || '').trim() || DEFAULT_SEARCH_PATH,
+      ...(playlistPath.startsWith('/') ? { playlistPath } : {}),
       icon: typeof reg.icon === 'string' ? reg.icon.trim() : undefined,
     };
     const providers = await this.getSearchProviders();

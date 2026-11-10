@@ -62,6 +62,7 @@ export interface MiotConfig {
   external_search_timeout: number;
   external_search_no_import: boolean;
   external_search_auto_continue: boolean;
+  external_search_random_playlist: boolean;
   search_priority: 'parallel' | 'local_first' | 'external_first';
   music_api_model_disabled: string[];
   music_api_model_defaults: string[];
@@ -99,6 +100,8 @@ export interface SearchProvider {
   active?: boolean;
   search_path?: string;
   searchPath?: string;
+  playlist_path?: string;
+  playlist_url?: string;
   icon?: string;
 }
 

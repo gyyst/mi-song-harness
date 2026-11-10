@@ -1332,7 +1332,8 @@ export class MusicCommandService {
     // 本地多字段搜索用歌名+歌手（配合 cover 匹配提升命中）；在线 hint / TTS 文案仍用纯歌名
     const searchTerm = artist && artist.trim() ? `${songName} ${artist.trim()}` : songName;
 
-    // 空参数处理：先续播当前队列；没有队列或已到队尾时播放曲库全部歌曲。
+    // 空参数处理：先续播当前队列；没有队列或已到队尾时随机播放网络歌单，
+    // 搜索源不支持/失败再回落曲库全部歌曲。
     // 「播放音乐」这类整句都是口令的搜索词参数为空，不能只 next()：单曲临时队列
     // 到队尾会被 next() 直接 stop，用户听不到任何声音。
     if (!songName) {
@@ -1340,11 +1341,15 @@ export class MusicCommandService {
         songloft.log.info('[MusicCommandService] Play song: resume last playback');
         const ok = await pm.next();
         if (ok) return null;
-        songloft.log.info('[MusicCommandService] Play song: current queue has no next song, fallback to library playback');
+        songloft.log.info('[MusicCommandService] Play song: current queue has no next song, fallback to online playlist');
       } else {
-        songloft.log.info('[MusicCommandService] Play song: no active playlist, fallback to library playback');
+        songloft.log.info('[MusicCommandService] Play song: no active playlist, fallback to online playlist');
       }
-      await this.playDefaultLibrary(pm, accountId, deviceId);
+      const online = await this.playRandomOnlinePlaylist(pm, accountId, deviceId);
+      if (!online) {
+        songloft.log.info('[MusicCommandService] Play song: online playlist unavailable, fallback to library playback');
+        await this.playDefaultLibrary(pm, accountId, deviceId);
+      }
       return null;
     }
 
@@ -1468,6 +1473,70 @@ export class MusicCommandService {
       return;
     }
     songloft.log.info(`[MusicCommandService] Play default library success: songs=${songs.length} mode=${mode}`);
+  }
+
+  /**
+   * 随机播放一个网络歌单（「播放音乐」无歌名且当前队列没有下一首时）。
+   *
+   * 只使用已启用且注册了随机歌单能力的搜索源（如洛雪音源）。歌单由 provider
+   * 随机挑选，mi-song-harness 只负责批量入库并交给 PlaylistManager；任何一步
+   * 失败都返回 false，由调用方回落到曲库全部歌曲。
+   */
+  private async playRandomOnlinePlaylist(
+    pm: PlaylistManager,
+    accountId: string,
+    deviceId: string,
+  ): Promise<boolean> {
+    try {
+      const config = await this.configManager.getConfig();
+      if (!config.external_search_enabled || !config.external_search_random_playlist) return false;
+      if (config.external_search_no_import) {
+        songloft.log.info('[MusicCommandService] Play random online playlist skipped: no-import mode');
+        return false;
+      }
+
+      const playlist = await this.onlineSearcher.fetchRandomPlaylist();
+      if (!playlist) {
+        songloft.log.info('[MusicCommandService] Play random online playlist: no playlist available');
+        return false;
+      }
+      const songs = await this.onlineSearcher.importPlaylistSongs(playlist.songs);
+      if (songs.length === 0) {
+        songloft.log.warn('[MusicCommandService] Play random online playlist: import produced no playable songs');
+        return false;
+      }
+
+      let mode: PlayMode = 'loop';
+      try {
+        const devices = await this.configManager.getDevices(accountId);
+        const devCfg = devices.find(d => d.device_id === deviceId);
+        if (devCfg && devCfg.play_mode) {
+          mode = devCfg.play_mode as PlayMode;
+        }
+      } catch (e) {
+        songloft.log.warn('[MusicCommandService] Play random online playlist: failed to read device play mode: ' + String(e));
+      }
+
+      pm.prepareForNewPlayback();
+      try {
+        await this.minaService.stopPlay(accountId, deviceId);
+      } catch (e) {
+        songloft.log.warn('[MusicCommandService] Play random online playlist: failed to interrupt broadcast: ' + String(e));
+      }
+
+      const label = `网络歌单: ${playlist.name}`;
+      songloft.log.info(`[MusicCommandService] Play random online playlist: name="${playlist.name}" songs=${songs.length} mode=${mode}`);
+      const ok = await pm.playWithSongs(songs, 0, mode, label, '');
+      if (!ok) {
+        songloft.log.error('[MusicCommandService] Play random online playlist: playWithSongs failed');
+        return false;
+      }
+      songloft.log.info(`[MusicCommandService] Play random online playlist success: name="${playlist.name}" songs=${songs.length} mode=${mode}`);
+      return true;
+    } catch (e) {
+      songloft.log.warn('[MusicCommandService] Play random online playlist failed: ' + String(e));
+      return false;
+    }
   }
 
   private stripArtistSuffix(argument: string): string {

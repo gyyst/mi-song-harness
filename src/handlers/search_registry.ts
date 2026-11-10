@@ -11,6 +11,8 @@ import { ConfigManager } from '../config/manager';
 interface RegisterProviderPayload {
   name?: string;
   searchPath?: string;
+  /** 可选：随机网络歌单接口子路径（如 '/api/songlist/random'）。 */
+  playlistPath?: string;
   icon?: string;
 }
 
@@ -30,6 +32,7 @@ export function registerSearchProviderComm(configManager: ConfigManager): void {
       entryPath,
       name: typeof p.name === 'string' ? p.name : entryPath,
       searchPath: typeof p.searchPath === 'string' ? p.searchPath : '',
+      playlistPath: typeof p.playlistPath === 'string' ? p.playlistPath : '',
       icon: typeof p.icon === 'string' ? p.icon : undefined,
     });
     songloft.log.info(`[search-registry] 已注册搜索源候选: ${entryPath} (${p.name || entryPath})`);

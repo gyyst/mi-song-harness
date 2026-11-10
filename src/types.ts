@@ -152,6 +152,8 @@ export interface SearchProviderRegistration {
   entryPath: string;   // 提供方插件 entryPath（= 可信 from）
   name: string;        // 显示名
   searchPath: string;  // 搜索子路径，默认 '/api/search/topone'
+  /** 可选：随机网络歌单接口子路径。提供方自己负责随机挑歌单，MIoT 不解读平台结构。 */
+  playlistPath?: string;
   icon?: string;       // 可选图标
 }
 
@@ -179,6 +181,7 @@ export interface PluginConfig {
   external_search_timeout: number;     // 外部搜索超时（秒），默认 6
   external_search_no_import: boolean;   // 不入库直接播放：命中直链型结果时直接把原始 URL 推给音箱，不写入曲库（临时链接友好）
   external_search_auto_continue: boolean; // 播完自动连播：单曲点播来自外部搜索且未配置目标歌单时，播完后自动从搜索源/曲库挑选其他网络歌曲继续播放
+  external_search_random_playlist: boolean; // 「播放音乐」无歌名时随机播放搜索源提供的网络歌单；搜索源不支持或失败时回落曲库
   search_priority: SearchPriority;     // 搜歌优先级策略
   music_api_model_disabled?: string[]; // 显式禁用 Music API 的型号（覆盖内置默认清单）
   indicator_light_enabled?: boolean;

@@ -9,7 +9,7 @@ import { URLBuilder, playbackOptionsOf } from '../player/url_builder';
 import { ConfigManager } from '../config/manager';
 import { IndexingManager } from '../indexing/manager';
 import { GroupCoordinator } from '../group/coordinator';
-import type { ExternalSearchSource, PlayMode } from '../types';
+import type { ExternalSearchSource, PlayMode, SearchProviderRegistration } from '../types';
 import type { PlaylistManager } from '../player/manager';
 
 // 外部搜索 API 请求体
@@ -83,6 +83,31 @@ interface RemoteSongsResponse {
 const AUTO_CONTINUE_BATCH = 3;
 /** 每次补充最多新发几条搜索：外部搜索单条超时可达 6s，不能无限试 */
 const AUTO_CONTINUE_SEARCH_ATTEMPTS = 2;
+
+/** 「播放音乐」随机网络歌单：一次最多取多少首，避免一次导入过大。 */
+export const RANDOM_PLAYLIST_SONG_LIMIT = 20;
+/**
+ * 随机歌单通常要先列歌单、再取详情，比单曲搜索多一跳；
+ * 给独立的宽期限，不把用户配置的 6 秒单曲搜索超时套过来。
+ */
+const RANDOM_PLAYLIST_TIMEOUT_MS = 12000;
+
+/** 搜索源返回的随机歌单（provider 自行完成平台/榜单随机）。 */
+export interface RandomPlaylist {
+  name: string;
+  platform?: string;
+  songs: OnlineSearchResult[];
+}
+
+interface RandomPlaylistResponse {
+  code: number;
+  msg?: string;
+  data?: {
+    name?: string;
+    platform?: string;
+    songs?: OnlineSearchResult[];
+  } | null;
+}
 
 /**
  * 一次「单曲播完自动连播」链路的上下文。
@@ -244,6 +269,238 @@ export class OnlineSearcher {
     }
     songloft.log.warn('[OnlineSearcher] No source matched for keyword: ' + keyword);
     return null;
+  }
+
+  /**
+   * 随机取一个网络歌单，供「播放音乐」在无具体歌名时使用。
+   *
+   * 只在「已启用且注册了 playlistPath」的搜索源里找；随机挑哪个平台/歌单由
+   * provider 自己决定，MIoT 不解读平台、标签或榜单结构。失败返回 null，
+   * 由调用方回落到曲库全部歌曲。
+   */
+  async fetchRandomPlaylist(limit = RANDOM_PLAYLIST_SONG_LIMIT): Promise<RandomPlaylist | null> {
+    try {
+      const config = await this.configManager.getConfig();
+      if (!config.external_search_enabled) return null;
+      if (config.external_search_no_import) {
+        // 歌单里的结果是解析型条目，必须入库后由宿主回调 provider 解析；不入库模式无法播放。
+        songloft.log.info('[OnlineSearcher] 随机网络歌单需要入库播放，已跳过（当前开启了不入库直接播放）');
+        return null;
+      }
+      const sources = await this.getEnabledSources();
+      if (sources.length === 0) return null;
+
+      let providers: SearchProviderRegistration[] = [];
+      try {
+        providers = await this.configManager.getSearchProviders();
+      } catch (e) {
+        songloft.log.warn('[OnlineSearcher] Failed to load search providers: ' + String(e));
+        return null;
+      }
+      const matched = this.findPlaylistProvider(providers, sources);
+      if (!matched) {
+        songloft.log.info('[OnlineSearcher] 没有已启用且支持随机歌单的搜索源');
+        return null;
+      }
+
+      const url = await this.buildRandomPlaylistUrl(matched.provider, matched.source, limit);
+      const token = await this.resolveSourceToken(matched.source);
+      songloft.log.info('[OnlineSearcher] [Diag] Request random playlist GET ' + url);
+      const text = await this.fetchTextWithTimeout(url, token, RANDOM_PLAYLIST_TIMEOUT_MS);
+      if (!text) return null;
+
+      let resp: RandomPlaylistResponse;
+      try {
+        resp = JSON.parse(text) as RandomPlaylistResponse;
+      } catch {
+        songloft.log.warn('[OnlineSearcher] Failed to parse random playlist response: ' + text.slice(0, 500));
+        return null;
+      }
+      if (resp?.code !== 0 || !resp.data) {
+        songloft.log.warn('[OnlineSearcher] Random playlist returned code=' + (resp?.code ?? 'null') + ' msg=' + (resp?.msg || ''));
+        return null;
+      }
+      const songs = (Array.isArray(resp.data.songs) ? resp.data.songs : [])
+        .filter((song) => !!song && typeof song.title === 'string' && song.title.trim() !== '')
+        .slice(0, Math.max(1, Math.min(RANDOM_PLAYLIST_SONG_LIMIT, limit)));
+      if (songs.length === 0) {
+        songloft.log.warn('[OnlineSearcher] Random playlist is empty');
+        return null;
+      }
+      const name = (resp.data.name || '').trim() || '网络歌单';
+      songloft.log.info(`[OnlineSearcher] Random playlist hit: "${name}" platform=${resp.data.platform || ''} songs=${songs.length}`);
+      return { name, platform: resp.data.platform, songs };
+    } catch (e) {
+      songloft.log.warn('[OnlineSearcher] Random playlist failed: ' + String(e));
+      return null;
+    }
+  }
+
+  /**
+   * 在已启用搜索源中找第一个支持随机歌单的 provider。
+   * 配置页把 provider 落成搜索源时保存的是完整搜索 URL，因此按 URL 路径匹配
+   * （同时兼容相对路径和带 origin 的手填地址）。
+   */
+  private findPlaylistProvider(
+    providers: SearchProviderRegistration[],
+    sources: ExternalSearchSource[],
+  ): { provider: SearchProviderRegistration; source: ExternalSearchSource } | null {
+    const byPath = new Map<string, ExternalSearchSource>();
+    for (const source of sources) {
+      const key = this.normalizeUrlPath(source.url);
+      if (key && !byPath.has(key)) byPath.set(key, source);
+    }
+    for (const provider of providers) {
+      const playlistPath = (provider.playlistPath || '').trim();
+      if (!playlistPath) continue;
+      const searchUrl = `/api/v1/jsplugin/${provider.entryPath}${provider.searchPath || '/api/search/topone'}`;
+      const source = byPath.get(this.normalizeUrlPath(searchUrl));
+      if (source) return { provider, source };
+    }
+    return null;
+  }
+
+  /** 取 URL 的路径部分用于比较；相对路径按站内地址解析。 */
+  private normalizeUrlPath(url: string): string {
+    const text = (url || '').trim();
+    if (!text) return '';
+    try {
+      return new URL(text, 'http://loopback.local').pathname.replace(/\/+$/, '');
+    } catch {
+      return text.replace(/[?#].*$/, '').replace(/\/+$/, '');
+    }
+  }
+
+  /** 构造随机歌单接口地址：保留搜索源的手填 origin，相对源走宿主 loopback。 */
+  private async buildRandomPlaylistUrl(
+    provider: SearchProviderRegistration,
+    source: ExternalSearchSource,
+    limit: number,
+  ): Promise<string> {
+    const path = `/api/v1/jsplugin/${provider.entryPath}${provider.playlistPath}`;
+    const sourceUrl = (source.url || '').trim();
+    let base: string;
+    if (/^https?:\/\//i.test(sourceUrl)) {
+      base = new URL(sourceUrl).origin + path;
+    } else {
+      base = (await getHostAPIBaseUrl()) + path;
+    }
+    const safeLimit = Math.max(1, Math.min(RANDOM_PLAYLIST_SONG_LIMIT, limit));
+    return `${base}${base.includes('?') ? '&' : '?'}limit=${safeLimit}`;
+  }
+
+  /** 带独立超时的 GET 文本请求；失败/超时/非 2xx 都返回 null。 */
+  private async fetchTextWithTimeout(url: string, token: string, timeoutMs: number): Promise<string | null> {
+    let finished = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<null>((resolve) => {
+      timer = setTimeout(() => {
+        finished = true;
+        songloft.log.warn(`[OnlineSearcher] Random playlist timeout (>${timeoutMs / 1000}s)`);
+        resolve(null);
+      }, timeoutMs);
+    });
+    const request = (async (): Promise<string | null> => {
+      const resp = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json', Authorization: token },
+      });
+      if (finished) return null;
+      const text = await resp.text();
+      if (finished) return null;
+      songloft.log.info(`[OnlineSearcher] [Diag] Random playlist response status=${resp.status} body=${text.slice(0, 500)}`);
+      if (resp.status < 200 || resp.status >= 300) return null;
+      return text;
+    })();
+    try {
+      return await Promise.race([request, timeout]);
+    } catch (e) {
+      songloft.log.warn('[OnlineSearcher] Random playlist fetch error: ' + String(e));
+      return null;
+    } finally {
+      finished = true;
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  }
+
+  /**
+   * 批量导入随机歌单的歌曲，返回可直接交给 PlaylistManager 的歌曲对象。
+   * 与单曲点播共用 /api/v1/songs/remote 去重；返回顺序按候选的 dedup_key 对齐，
+   * 没有 dedup_key 时退回响应顺序。
+   */
+  async importPlaylistSongs(songs: OnlineSearchResult[]): Promise<any[]> {
+    const candidates = (songs || []).filter((song) => !!song && !!song.title);
+    if (candidates.length === 0) return [];
+    try {
+      const token = await songloft.plugin.getToken();
+      const host = await getHostAPIBaseUrl();
+      const payload = candidates.map((song) => this.toRemoteSongItem(song));
+      const resp = await fetch(host + '/api/v1/songs/remote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
+      });
+      const text = await resp.text();
+      let result: RemoteSongsResponse;
+      try {
+        result = JSON.parse(text) as RemoteSongsResponse;
+      } catch {
+        songloft.log.warn('[OnlineSearcher] Failed to parse playlist import response: ' + text.slice(0, 500));
+        return [];
+      }
+      const imported = Array.isArray(result.songs) ? result.songs : [];
+      if (imported.length === 0) {
+        songloft.log.warn('[OnlineSearcher] Playlist import returned no songs: ' + text.slice(0, 500));
+        return [];
+      }
+      const byDedup = new Map<string, RemoteSongsResponse['songs'][number]>();
+      for (const item of imported) {
+        if (item.dedup_key) byDedup.set(item.dedup_key, item);
+      }
+      const playable: any[] = [];
+      const seen = new Set<number>();
+      for (let i = 0; i < candidates.length; i++) {
+        const candidate = candidates[i];
+        const item = (candidate.dedup_key && byDedup.get(candidate.dedup_key)) || imported[i];
+        if (!item || !(item.id > 0) || !item.url || seen.has(item.id)) continue;
+        seen.add(item.id);
+        playable.push(this.buildPlayableSong(item, candidate));
+      }
+      songloft.log.info(`[OnlineSearcher] Playlist import: requested=${candidates.length} imported=${imported.length} playable=${playable.length}`);
+      return playable;
+    } catch (e) {
+      songloft.log.warn('[OnlineSearcher] Playlist import fetch error: ' + String(e));
+      return [];
+    }
+  }
+
+  /** 用导入响应和搜索结果拼出 PlaylistManager 可播放的完整歌曲对象。 */
+  private buildPlayableSong(
+    imported: RemoteSongsResponse['songs'][number],
+    song: OnlineSearchResult,
+  ): any {
+    return {
+      id: imported.id,
+      type: imported.type || 'remote',
+      title: imported.title || song.title,
+      artist: imported.artist || song.artist || '',
+      album: imported.album || song.album || '',
+      duration: imported.duration || song.duration || 0,
+      file_path: '',
+      url: imported.url,
+      cover_path: '',
+      cover_url: imported.cover_url || song.cover_url || '',
+      lyric_url: '',
+      file_size: 0,
+      format: '',
+      bit_rate: 0,
+      sample_rate: 0,
+      is_live: false,
+      cache_hash: '',
+      plugin_entry_path: imported.plugin_entry_path || song.plugin_entry_path || '',
+      source_data: imported.source_data || '',
+      dedup_key: imported.dedup_key || song.dedup_key || '',
+    };
   }
 
   /**
@@ -759,13 +1016,9 @@ export class OnlineSearcher {
     return await this.playSearchResult(song, accountId, deviceId, minaService);
   }
 
-  /**
-   * 导入歌曲到 songloft 数据库
-   * @returns 导入成功后包含歌曲 id 和 url 的对象，失败返回 null
-   */
-  private async importSong(song: OnlineSearchResult): Promise<{ id: number; url: string } | null> {
-    // provider 字段原样映射，不解读、不补插件名
-    const remoteItem: RemoteSongItem = {
+  /** provider 字段原样映射，不解读、不补插件名。 */
+  private toRemoteSongItem(song: OnlineSearchResult): RemoteSongItem {
+    return {
       title: song.title,
       artist: song.artist || '',
       album: song.album || '',
@@ -780,6 +1033,14 @@ export class OnlineSearcher {
       lyric: song.lyric || '',
       lyric_source: song.lyric_source || '',
     };
+  }
+
+  /**
+   * 导入歌曲到 songloft 数据库
+   * @returns 导入成功后包含歌曲 id 和 url 的对象，失败返回 null
+   */
+  private async importSong(song: OnlineSearchResult): Promise<{ id: number; url: string } | null> {
+    const remoteItem = this.toRemoteSongItem(song);
 
     try {
       const pluginToken = await songloft.plugin.getToken();

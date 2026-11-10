@@ -60,6 +60,7 @@ function fixture(t, options = {}) {
 
   const pm = {
     hasPlaylist: () => options.hasPlaylist ?? false,
+    isRandomNetworkPlaylist: () => options.randomNetworkQueue ?? false,
     next: async () => { events.push('next'); return options.nextOK ?? true; },
     prepareForNewPlayback: () => events.push('prepare'),
     playWithSongs: async (...args) => { events.push(['playWithSongs', ...args]); return options.playOK ?? true; },

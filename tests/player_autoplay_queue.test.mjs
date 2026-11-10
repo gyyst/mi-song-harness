@@ -43,7 +43,7 @@ function song(id, title = `song-${id}`, artist = 'artist') {
  * 构造一个只驱动队列逻辑的 manager：playCurrent 被替换成纯状态更新，
  * 不触发真实的设备推送、定时器和起播确认。
  */
-function managerWithQueue(songs, mode = 'order') {
+function managerWithQueue(songs, mode = 'order', label = '单曲测试') {
   const manager = new PlaylistManager('account', 'speaker', {
     getPlayState: async () => ({ status: 1, position: 10, duration: 180, hasPosition: true }),
     playURL: async () => true,
@@ -55,7 +55,7 @@ function managerWithQueue(songs, mode = 'order') {
     savePlaylistProgress: async () => { },
   });
   manager.playCurrent = async () => true;
-  return manager.playWithSongs(songs, 0, mode, '单曲测试').then(() => {
+  return manager.playWithSongs(songs, 0, mode, label).then(() => {
     manager.state = 'playing';
     return manager;
   });
@@ -150,5 +150,21 @@ test('queue generation advances on every full queue replacement', async () => {
     await manager.playWithSongs([song(3)], 0, 'order', '换一首');
     assert.ok(manager.getQueueGeneration() > first);
     manager.cleanup();
+  });
+});
+
+test('isRandomNetworkPlaylist only marks the random online playlist queue', async () => {
+  await withGlobals(async () => {
+    const network = await managerWithQueue([song(1)], 'order', '网络歌单: 华语热歌');
+    assert.equal(network.isRandomNetworkPlaylist(), true);
+    network.cleanup();
+
+    const artist = await managerWithQueue([song(2)], 'order', '歌手: 周杰伦');
+    assert.equal(artist.isRandomNetworkPlaylist(), false);
+    artist.cleanup();
+
+    const plain = await managerWithQueue([song(3)], 'order', '');
+    assert.equal(plain.isRandomNetworkPlaylist(), false);
+    plain.cleanup();
   });
 });

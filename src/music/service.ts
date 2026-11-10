@@ -1337,11 +1337,14 @@ export class MusicCommandService {
     // 「播放音乐」这类整句都是口令的搜索词参数为空，不能只 next()：单曲临时队列
     // 到队尾会被 next() 直接 stop，用户听不到任何声音。
     if (!songName) {
-      if (pm.hasPlaylist()) {
+      if (pm.hasPlaylist() && !pm.isRandomNetworkPlaylist()) {
         songloft.log.info('[MusicCommandService] Play song: resume last playback');
         const ok = await pm.next();
         if (ok) return null;
         songloft.log.info('[MusicCommandService] Play song: current queue has no next song, fallback to online playlist');
+      } else if (pm.hasPlaylist()) {
+        // 上一张随机网络歌单可能抽到不可播平台，整队列无声；继续 next() 只会逐首空等。
+        songloft.log.info('[MusicCommandService] Play song: random network queue, start a new online playlist');
       } else {
         songloft.log.info('[MusicCommandService] Play song: no active playlist, fallback to online playlist');
       }

@@ -1206,6 +1206,17 @@ export class PlaylistManager {
   }
 
   /**
+   * 当前队列是否为「播放音乐」随机生成的网络歌单。
+   *
+   * 这类队列的曲目依赖外部音源直链，抽到不能解析直链的平台时整张队列都会无声。
+   * 再说「播放音乐」时应重新随机一张，而不是用 next() 在坏队列里逐首跳。
+   * 队列一旦被其他来源替换，tempPlaylistName 随之更新，本判断自动失效。
+   */
+  isRandomNetworkPlaylist(): boolean {
+    return this.playlistId === this.tempId && this.tempPlaylistName.startsWith('网络歌单:');
+  }
+
+  /**
    * 当前歌单/临时列表的歌曲总数
    */
   getTotalSongs(): number {

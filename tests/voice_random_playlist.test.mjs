@@ -64,6 +64,7 @@ function fixture(t, options = {}) {
 
   const pm = {
     hasPlaylist: () => options.hasPlaylist ?? false,
+    isRandomNetworkPlaylist: () => options.randomNetworkQueue ?? false,
     next: async () => { events.push('next'); return options.nextOK ?? true; },
     prepareForNewPlayback: () => events.push('prepare'),
     playWithSongs: async (...args) => {
@@ -146,6 +147,17 @@ test('播放音乐时队列还有下一首，继续队列而不是换网络歌�
 
   assert.deepEqual(f.events, ['cancel', 'next']);
   assert.deepEqual(f.onlineCalls, []);
+});
+
+test('播放音乐时随机网络歌单不逐首续播，直接重新随机', async t => {
+  const f = fixture(t, { hasPlaylist: true, randomNetworkQueue: true, nextOK: true });
+  await f.engine.executePlaySong('', 'account', 'speaker');
+
+  assert.ok(!f.events.includes('next'), '不可播平台的旧队列不应继续 next()');
+  assert.deepEqual(f.onlineCalls.map(c => c[0]), ['fetch', 'import']);
+  assert.deepEqual(playWithSongsCalls(f.events), [
+    ['playWithSongs', onlineSongs, 0, 'loop', '网络歌单: 华语热歌', ''],
+  ]);
 });
 
 test('随机歌单关闭时回落到曲库全部歌曲', async t => {

@@ -70,6 +70,7 @@ function fixture(t, options = {}) {
   const pm = {
     isPlaying: () => false,
     hasPlaylist: () => options.active || false,
+    isRandomNetworkPlaylist: () => false,
     next: async () => { localPlays.push('next'); return true; },
     prepareForNewPlayback: () => events.push('prepare'),
     setAnnounceOnSongChange() { },

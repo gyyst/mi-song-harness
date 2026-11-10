@@ -10,6 +10,15 @@ Include rule, scope, full owner/repo#number, failure/fix commit SHAs, actual val
 
 ## Entries
 
+### MIOT-029: Voice-path cross-plugin calls need racing, caching, and cold-wake coverage
+
+- Scope: random network playlist for “播放音乐” without a song name; mi-song-harness `src/voicecmd/online_searcher.ts`, lxmusic `src/handlers/songlist.ts` / `src/integrations/miSongHarness.ts`; baselines mi-song `2df96db`, lxmusic `fcbd65e`.
+- Evidence: On 2026-11-10, the user upgraded but still fell back to the library. Host logs show the random-playlist request at 23:44:16, the client abandoning it at 12 seconds at 23:44:28.148, and the provider returning at 23:44:28.182 with `dur_ms=12063.554`. The old implementation serially tried platforms, list pages, and details; measured kw details were 3.6–9.3 s and leaderboard details 23–27 s. A separate upgrade-order issue: installing lxmusic before upgrading mi-song-harness let the old receiver discard `playlistPath`; lxmusic stopped after its first successful registration, so `/search-providers` lacked the field and the voice path never called the random endpoint.
+- Rule and fix: Cross-plugin calls on the voice path require an overall budget and concurrent racing; never wait serially for slow platforms. Race at most three platform list calls (5 s), fetch two detail candidates concurrently (10 s), and give leaderboards only a short fallback budget (4 s). Cache successful playlists for 30 minutes and refill in the background so repeated requests return immediately. The client timeout must cover cold wake plus the real upper bound of slow platforms (12 s → 22 s); a response that completes just after the deadline must not be judged as failure. Capability registration is not one-shot: re-report periodically after success (5 minutes) and keep 60-second throttling on failure, covering targets that reload an old persisted record after upgrade/reinstall.
+- Done right: The real lxmusic handler plus real platform APIs produced 434 ms, 0 ms (cache hit), and 214 ms for three consecutive `limit=20` calls in Node. Focused tests cover list/detail racing, cache hits and refills, leaderboard fallback, cold-wake waiting, deduplication, and invalid parameters. All 1129 mi-song-harness tests, type checks, build, and package validation pass; lxmusic typecheck, build, and validation pass. Released `v2026.11.10.4` (mi-song `e9705ab`) and `v2026.11.10.3` (lxmusic `9e36a6e`); both CIs succeeded.
+- Not run: Real-speaker playback, in-host latency with the deployed build, and native WebView. Node lacks the host crypto bridges, so some kg/mg calls fail; the kw path and race degradation are verified, but this does not prove every platform can return a random playlist.
+- Seen 1× (2026-11-10). Status: released; awaiting installation and real-device verification by the user.
+
 ### MIOT-028: Interrupting an answer does not authorize the next AI turn
 
 - Scope: songloft-org/songloft-plugin-miot#137; baseline `9eb7eb3756631027ca35183ddac734960cd27661`.
